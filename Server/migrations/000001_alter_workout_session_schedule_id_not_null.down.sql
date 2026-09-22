@@ -1,0 +1,2 @@
+ALTER TABLE "WorkoutSession"
+ALTER COLUMN "scheduleId" DROP NOT NULL;
