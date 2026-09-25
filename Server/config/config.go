@@ -1,10 +1,11 @@
 package config
 
 import (
-	"strings"
+	"os"
+	"path/filepath"
 	"sync"
 
-	"github.com/spf13/viper" // load config
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -32,22 +33,49 @@ var configInstance *Config
 
 func GetConfig() *Config {
 	once.Do(func() {
-		viper.SetConfigName("config")
-		viper.SetConfigType("ymal")
-		viper.AddConfigPath(".")
+		workingDir, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+
+		configPath := findEnvFile(workingDir)
+		viper.SetConfigFile(configPath)
+		viper.SetConfigType("env")
 		viper.AutomaticEnv()
-		viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 		if err := viper.ReadInConfig(); err != nil {
 			panic(err)
 		}
 
-		// Marshal = chuyển dữ liệu Go (struct, map, slice) thành JSON (dạng []byte).
-		// Unmarshal = chuyển JSON thành dữ liệu Go.
-		if err := viper.Unmarshal(&configInstance); err != nil {
-			panic(err)
+		configInstance = &Config{
+			Server: &Server{
+				Port: viper.GetInt("PORT"),
+			},
+			Db: &Db{
+				Host:     viper.GetString("DB_HOST"),
+				Port:     viper.GetInt("DB_PORT"),
+				User:     viper.GetString("DB_USER"),
+				Password: viper.GetString("DB_PASSWORD"),
+				DBName:   viper.GetString("DB_NAME"),
+				SSLMode:  viper.GetString("DB_SSL_MODE"),
+				TimeZone: viper.GetString("DB_TIME_ZONE"),
+			},
 		}
 	})
 
 	return configInstance
+}
+
+func findEnvFile(startDir string) string {
+	for directory := startDir; ; directory = filepath.Dir(directory) {
+		configPath := filepath.Join(directory, ".env")
+		if _, err := os.Stat(configPath); err == nil {
+			return configPath
+		}
+
+		parentDirectory := filepath.Dir(directory)
+		if parentDirectory == directory {
+			panic(".env file not found")
+		}
+	}
 }

@@ -3,26 +3,28 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
-	"os"
 
+	"github.com/TuanNghia295/BE-FIT/config"
 	"github.com/TuanNghia295/BE-FIT/package/database"
-	"github.com/joho/godotenv"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// config env file
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		log.Fatal("Erro loading .env")
-	}
-	// Connect to the database
-	database.ConnectDB()
+	appConfig := config.GetConfig()
 
-	port := os.Getenv("PORT")
+	r := gin.Default()
+
+	r.GET("/", func(ctx *gin.Context) {
+		ctx.JSON(200, gin.H{"message": "Server is running"})
+	})
+
+	// Connect to the database
+	database.ConnectDB(appConfig)
+
 	// Start API server
-	fmt.Printf("BE-FIT API running on: http://localhost:%s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	PORT := appConfig.Server.Port
+	fmt.Printf("BE-FIT API running on: http://localhost:%d\n", PORT)
+	if err := r.Run(fmt.Sprintf(":%d", PORT)); err != nil {
 		log.Fatal(err)
 	}
 
