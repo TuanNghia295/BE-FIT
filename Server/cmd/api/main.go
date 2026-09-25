@@ -5,6 +5,9 @@ import (
 	"log"
 
 	"github.com/TuanNghia295/BE-FIT/config"
+	"github.com/TuanNghia295/BE-FIT/internal/delivery/http"
+	"github.com/TuanNghia295/BE-FIT/internal/infrastructure/postgres"
+	"github.com/TuanNghia295/BE-FIT/internal/usecase/user"
 	"github.com/TuanNghia295/BE-FIT/package/database"
 	"github.com/gin-gonic/gin"
 )
@@ -12,14 +15,22 @@ import (
 func main() {
 	appConfig := config.GetConfig()
 
+	// Connect to the database
+	db := database.ConnectDB(appConfig)
+
+	userRepo := postgres.NewUserRepository(db)
+
+	registerUsecase := user.NewRegisterUsecase(userRepo)
+
+	userHandler := http.NewUserHandler(registerUsecase)
+
 	r := gin.Default()
 
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{"message": "Server is running"})
 	})
 
-	// Connect to the database
-	database.ConnectDB(appConfig)
+	r.POST("/users/register", userHandler.Register)
 
 	// Start API server
 	PORT := appConfig.Server.Port
