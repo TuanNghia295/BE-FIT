@@ -19,7 +19,7 @@ func NewRegisterUsecase(userRepo repositories.UserRepository) *RegisterUsecase {
 	}
 }
 
-func (u *RegisterUsecase) Execute(email string, password string, fullName string) (*entities.Users, error) {
+func (u *RegisterUsecase) Execute(email string, fullName, password string) (*entities.Users, error) {
 	// check email exist
 	existingEmail, _ := u.userRepo.FindByEmail(email)
 

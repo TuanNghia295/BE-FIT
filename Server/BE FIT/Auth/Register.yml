@@ -1,0 +1,23 @@
+info:
+  name: Register
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: http://localhost:2905/users/register
+  body:
+    type: json
+    data: |-
+      {
+        "email": "tuannghia2905@gmail.com",
+        "fullName": "Nguyen Tuan Nghia",
+        "password": "Panda2905@"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

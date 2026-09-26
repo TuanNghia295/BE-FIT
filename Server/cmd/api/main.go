@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"github.com/TuanNghia295/BE-FIT/config"
-	"github.com/TuanNghia295/BE-FIT/internal/delivery/http"
+	http "github.com/TuanNghia295/BE-FIT/internal/delivery/http/handler"
+	"github.com/TuanNghia295/BE-FIT/internal/delivery/http/middleware"
 	"github.com/TuanNghia295/BE-FIT/internal/infrastructure/postgres"
 	"github.com/TuanNghia295/BE-FIT/internal/usecase/user"
 	"github.com/TuanNghia295/BE-FIT/package/database"
@@ -25,6 +26,8 @@ func main() {
 	userHandler := http.NewUserHandler(registerUsecase)
 
 	r := gin.Default()
+
+	r.Use(middleware.ErrorHandler())
 
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{"message": "Server is running"})

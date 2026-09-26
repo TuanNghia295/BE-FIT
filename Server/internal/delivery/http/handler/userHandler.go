@@ -5,18 +5,13 @@ package http
 import (
 	"net/http"
 
+	"github.com/TuanNghia295/BE-FIT/internal/delivery/http/dto"
 	"github.com/TuanNghia295/BE-FIT/internal/usecase/user"
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
 	registerUsecase *user.RegisterUsecase
-}
-
-type RegisterRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	FullName string `json:"fullName"`
 }
 
 func NewUserHandler(registerUscase *user.RegisterUsecase) *UserHandler {
@@ -26,21 +21,18 @@ func NewUserHandler(registerUscase *user.RegisterUsecase) *UserHandler {
 }
 
 func (h *UserHandler) Register(c *gin.Context) {
-	var req RegisterRequest
+	var req dto.RegisterUserRequest
 
+	// ShouldBindJSON will parse JSON from FrontEnd -> Map JSON to DTO -> Validate binding tags -> Return errors if validate fail
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid request",
-		})
+		c.Error(err)
 		return
 	}
 
 	user, err := h.registerUsecase.Execute(req.Email, req.FullName, req.Password)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+		c.Error(err)
 		return
 	}
 
