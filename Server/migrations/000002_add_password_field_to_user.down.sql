@@ -1,2 +1,2 @@
-ALTER TABLE "User"
+ALTER TABLE "Users"
 DROP COLUMN "password";

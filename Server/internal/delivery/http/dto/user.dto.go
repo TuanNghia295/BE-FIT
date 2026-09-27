@@ -5,3 +5,12 @@ type RegisterUserRequest struct {
 	FullName string `json:"fullName" binding:"required,min=2,max=100"`
 	Password string `json:"password" binding:"required,min=6,max=20"`
 }
+
+type LoginUserRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6,max=20"`
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}

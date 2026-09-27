@@ -2,9 +2,11 @@ package user
 
 // Usecase use to write business logic
 import (
+	"context"
 	"errors"
 
 	"github.com/TuanNghia295/BE-FIT/internal/domains/entities"
+	domainErrors "github.com/TuanNghia295/BE-FIT/internal/domains/errors"
 	"github.com/TuanNghia295/BE-FIT/internal/domains/repositories"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -19,12 +21,14 @@ func NewRegisterUsecase(userRepo repositories.UserRepository) *RegisterUsecase {
 	}
 }
 
-func (u *RegisterUsecase) Execute(email string, fullName, password string) (*entities.Users, error) {
+func (u *RegisterUsecase) Execute(ctx context.Context, email string, fullName, password string) (*entities.Users, error) {
 	// check email exist
-	existingEmail, _ := u.userRepo.FindByEmail(email)
-
-	if existingEmail != nil {
+	existingEmail, err := u.userRepo.FindByEmail(ctx, email)
+	if err == nil && existingEmail != nil {
 		return nil, errors.New("Email already exists")
+	}
+	if err != nil && !errors.Is(err, domainErrors.ErrUserNotFound) {
+		return nil, err
 	}
 
 	// Hash password
@@ -40,7 +44,7 @@ func (u *RegisterUsecase) Execute(email string, fullName, password string) (*ent
 		Password: string(hashedPass),
 	}
 
-	err = u.userRepo.Create(user)
+	err = u.userRepo.Create(ctx, user)
 	if err != nil {
 		return nil, err
 	}

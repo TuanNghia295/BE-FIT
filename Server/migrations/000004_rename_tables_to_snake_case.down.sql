@@ -1,0 +1,13 @@
+ALTER TABLE users RENAME TO "Users";
+ALTER TABLE fitness_profile RENAME TO "FitnessProfile";
+ALTER TABLE refresh_token RENAME TO "RefreshToken";
+ALTER TABLE target RENAME TO "Target";
+ALTER TABLE training_availability RENAME TO "TrainingAvailability";
+ALTER TABLE workout_plan RENAME TO "WorkoutPlan";
+ALTER TABLE workout_schedule RENAME TO "WorkoutSchedule";
+ALTER TABLE exercise RENAME TO "Exercise";
+ALTER TABLE workout_exercise RENAME TO "WorkoutExercise";
+ALTER TABLE workout_set RENAME TO "WorkoutSet";
+ALTER TABLE workout_session RENAME TO "WorkoutSession";
+ALTER TABLE exercise_performance RENAME TO "ExercisePerformance";
+ALTER TABLE body_progress RENAME TO "BodyProgress";

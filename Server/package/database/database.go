@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/TuanNghia295/BE-FIT/config"
-	"github.com/jinzhu/gorm"
-	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func ConnectDB(conf *config.Config) *gorm.DB {
@@ -21,7 +21,7 @@ func ConnectDB(conf *config.Config) *gorm.DB {
 		conf.Db.TimeZone,
 	)
 
-	db, err := gorm.Open("postgres", dsn)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)

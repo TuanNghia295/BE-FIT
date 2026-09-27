@@ -1,19 +1,21 @@
 package entities
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type RefreshToken struct {
-	ID          string    `gorm:"column:id"`
-	TokenHash   string    `gorm:"column:tokenHash"`
-	TokenFamily int64     `gorm:"column:tokenFamily"`
-	UserID      string    `gorm:"column:userId"`
-	RevokeAt    time.Time `gorm:"column:revokeAt"`
-	ExpiredAt   time.Time `gorm:"column:expiredAt"`
-	ReplacedBy  string    `gorm:"column:replacedBy"`
-	CreatedAt   time.Time `gorm:"column:createdAt"`
-	UpdatedAt   time.Time `gorm:"column:updatedAt"`
+	ID           uuid.UUID  `gorm:"column:id;type:uuid;primaryKey;default:gen_random_uuid()"`
+	TokenHash    string     `gorm:"column:tokenHash;unique;not null"`
+	TokenFamily  uuid.UUID  `gorm:"column:tokenFamily;type:uuid;not null"`
+	UserID       uuid.UUID  `gorm:"column:userId;type:uuid;not null"`
+	RevokeAt     *time.Time `gorm:"column:revokeAt"`
+	ExpiresAt    time.Time  `gorm:"column:expiresAt;not null"`
+	ReplacedByID *uuid.UUID `gorm:"column:replacedById;type:uuid"`
+	CreatedAt    time.Time  `gorm:"column:createdAt"`
+	UpdatedAt    time.Time  `gorm:"column:updatedAt"`
 }
 
-func (RefreshToken) TableName() string {
-	return "RefreshToken"
-}
+func (RefreshToken) TableName() string { return "refresh_token" }

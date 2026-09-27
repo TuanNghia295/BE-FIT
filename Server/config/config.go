@@ -9,8 +9,10 @@ import (
 )
 
 type Config struct {
-	Server *Server
-	Db     *Db
+	Server       *Server
+	Db           *Db
+	JWTSecret    string
+	CookieSecure bool
 }
 
 type Server struct {
@@ -48,6 +50,8 @@ func GetConfig() *Config {
 		}
 
 		configInstance = &Config{
+			JWTSecret:    viper.GetString("JWT_SECRET"),
+			CookieSecure: viper.GetBool("COOKIE_SECURE"),
 			Server: &Server{
 				Port: viper.GetInt("PORT"),
 			},

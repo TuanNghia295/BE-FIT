@@ -2,9 +2,13 @@ package postgres
 
 // Used to write functions related to database queries
 import (
+	"context"
+	"errors"
+
 	"github.com/TuanNghia295/BE-FIT/internal/domains/entities"
+	domainErrors "github.com/TuanNghia295/BE-FIT/internal/domains/errors"
 	"github.com/TuanNghia295/BE-FIT/internal/domains/repositories"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 type userRepository struct {
@@ -16,15 +20,18 @@ func NewUserRepository(db *gorm.DB) repositories.UserRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) Create(user *entities.Users) error {
-	return r.db.Create(user).Error
+func (r *userRepository) Create(ctx context.Context, user *entities.Users) error {
+	return r.db.WithContext(ctx).Create(user).Error
 }
 
-func (r *userRepository) FindByEmail(email string) (*entities.Users, error) {
+func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entities.Users, error) {
 	var user entities.Users
 
-	err := r.db.Where("email = ?", email).First(&user).Error
+	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domainErrors.ErrUserNotFound
+		}
 		return nil, err
 	}
 

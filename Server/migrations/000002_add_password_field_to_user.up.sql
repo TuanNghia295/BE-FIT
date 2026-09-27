@@ -1,2 +1,2 @@
-ALTER TABLE "User"
+ALTER TABLE "Users"
 ADD COLUMN "password" TEXT;
