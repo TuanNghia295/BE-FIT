@@ -11,4 +11,5 @@ var (
 	ErrRefreshTokenNotFound = errors.New("refresh token not found")
 	ErrRefreshTokenExpired  = errors.New("refresh token expired")
 	ErrRefreshTokenReuse    = errors.New("refresh token reuse detected")
+	ErrBadRequest           = errors.New("Bad Request")
 )

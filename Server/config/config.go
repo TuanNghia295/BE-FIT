@@ -9,10 +9,11 @@ import (
 )
 
 type Config struct {
-	Server       *Server
-	Db           *Db
-	JWTSecret    string
-	CookieSecure bool
+	Server            *Server
+	Db                *Db
+	JWTPrivateKeyPath string
+	JWTPublicKeyPath  string
+	CookieSecure      bool
 }
 
 type Server struct {
@@ -50,8 +51,9 @@ func GetConfig() *Config {
 		}
 
 		configInstance = &Config{
-			JWTSecret:    viper.GetString("JWT_SECRET"),
-			CookieSecure: viper.GetBool("COOKIE_SECURE"),
+			JWTPrivateKeyPath: resolveConfigPath(configPath, viper.GetString("JWT_PRIVATE_KEY_PATH")),
+			JWTPublicKeyPath:  resolveConfigPath(configPath, viper.GetString("JWT_PUBLIC_KEY_PATH")),
+			CookieSecure:      viper.GetBool("COOKIE_SECURE"),
 			Server: &Server{
 				Port: viper.GetInt("PORT"),
 			},
@@ -68,6 +70,13 @@ func GetConfig() *Config {
 	})
 
 	return configInstance
+}
+
+func resolveConfigPath(configPath, configuredPath string) string {
+	if filepath.IsAbs(configuredPath) {
+		return configuredPath
+	}
+	return filepath.Join(filepath.Dir(configPath), configuredPath)
 }
 
 func findEnvFile(startDir string) string {

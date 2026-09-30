@@ -123,7 +123,7 @@ func (h *UserHandler) writeAuthResponse(c *gin.Context, clientType string, resul
 		if maxAge < 0 {
 			maxAge = 0
 		}
-		c.SetCookie("refresh_token", result.RefreshToken, maxAge, "/refresh", "", h.cookieSecure, true)
+		c.SetCookie("refresh_token", result.RefreshToken, maxAge, "/", "", h.cookieSecure, true)
 		c.JSON(http.StatusOK, gin.H{
 			"access_token": result.AccessToken,
 			"token_type":   result.TokenType,
@@ -134,4 +134,40 @@ func (h *UserHandler) writeAuthResponse(c *gin.Context, clientType string, resul
 	}
 
 	c.JSON(http.StatusOK, result)
+}
+
+func (h *UserHandler) Logout(c *gin.Context) {
+	clientType, ok := authClientType(c)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "X-Client-Type must be web or mobile"})
+		return
+	}
+
+	var refreshToken string
+	if clientType == "web" {
+		var err error
+		refreshToken, err = c.Cookie("refresh_token")
+		if err != nil {
+			c.Error(domainErrors.ErrUnauthorized)
+			return
+		}
+	} else {
+		var req dto.LogOutUserRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "refresh_token is required"})
+			return
+		}
+		refreshToken = req.RefreshToken
+	}
+
+	if err := h.refreshUsecase.Logout(c.Request.Context(), refreshToken); err != nil {
+		c.Error(err)
+		return
+	}
+
+	if clientType == "web" {
+		c.SetSameSite(http.SameSiteLaxMode)                                 //chỉ thiết lập SameSite attribute cho cookie
+		c.SetCookie("refresh_token", "", -1, "/", "", h.cookieSecure, true) //xóa refresh token cookie
+	}
+	c.JSON(http.StatusOK, gin.H{"success": "logout successfully"})
 }

@@ -22,10 +22,10 @@ func main() {
 
 	userRepo := postgres.NewUserRepository(db)
 	refreshRepo := postgres.NewRefreshTokenRepository(db)
-	if len(appConfig.JWTSecret) < 32 {
-		log.Fatal("JWT_SECRET must contain at least 32 bytes")
+	tokenService, err := auth.LoadJWTService(appConfig.JWTPrivateKeyPath, appConfig.JWTPublicKeyPath)
+	if err != nil {
+		log.Fatalf("load JWT key pair: %v", err)
 	}
-	tokenService := auth.NewJWTService(appConfig.JWTSecret)
 
 	registerUsecase := user.NewRegisterUsecase(userRepo)
 	loginUsecase := user.NewLoginUseCase(userRepo, refreshRepo, tokenService)
@@ -41,9 +41,10 @@ func main() {
 		ctx.JSON(200, gin.H{"message": "Server is running"})
 	})
 
-	r.POST("/register", userHandler.Register)
 	r.POST("/login", userHandler.Login)
+	r.POST("/register", userHandler.Register)
 	r.POST("/refresh", userHandler.Refresh)
+	r.POST("/logout", userHandler.Logout)
 
 	// Start API server
 	PORT := appConfig.Server.Port

@@ -30,6 +30,8 @@ type testRefreshTokenRepository struct {
 	token         *entities.RefreshToken
 	created       *entities.RefreshToken
 	familyRevoked bool
+	lookupHash    string
+	revokedFamily uuid.UUID
 	rotated       bool
 	rotationErr   error
 }
@@ -39,7 +41,8 @@ func (r *testRefreshTokenRepository) Create(_ context.Context, token *entities.R
 	return nil
 }
 
-func (r *testRefreshTokenRepository) FindByTokenHash(context.Context, string) (*entities.RefreshToken, error) {
+func (r *testRefreshTokenRepository) FindByTokenHash(_ context.Context, tokenHash string) (*entities.RefreshToken, error) {
+	r.lookupHash = tokenHash
 	if r.token == nil {
 		return nil, domainErrors.ErrRefreshTokenNotFound
 	}
@@ -59,8 +62,9 @@ func (r *testRefreshTokenRepository) Revoke(context.Context, uuid.UUID) error {
 	return nil
 }
 
-func (r *testRefreshTokenRepository) RevokeFamily(context.Context, uuid.UUID) error {
+func (r *testRefreshTokenRepository) RevokeFamily(_ context.Context, tokenFamily uuid.UUID) error {
 	r.familyRevoked = true
+	r.revokedFamily = tokenFamily
 	return nil
 }
 
@@ -170,5 +174,29 @@ func TestRefreshUsecaseRevokesFamilyOnReuse(t *testing.T) {
 	}
 	if !refreshTokens.familyRevoked {
 		t.Fatal("reused refresh token should revoke its token family")
+	}
+}
+
+func TestRefreshUsecaseLogoutHashesTokenAndRevokesFamily(t *testing.T) {
+	familyID := uuid.New()
+	refreshTokens := &testRefreshTokenRepository{
+		token: &entities.RefreshToken{
+			ID:          uuid.New(),
+			TokenHash:   "hash:raw-refresh-token",
+			TokenFamily: familyID,
+			UserID:      uuid.New(),
+			ExpiresAt:   time.Now().Add(time.Hour),
+		},
+	}
+	usecase := NewRefreshUseCase(refreshTokens, testTokenService{})
+
+	if err := usecase.Logout(context.Background(), "raw-refresh-token"); err != nil {
+		t.Fatalf("Logout returned an error: %v", err)
+	}
+	if refreshTokens.lookupHash != "hash:raw-refresh-token" {
+		t.Fatalf("expected hashed token lookup, got %q", refreshTokens.lookupHash)
+	}
+	if !refreshTokens.familyRevoked || refreshTokens.revokedFamily != familyID {
+		t.Fatal("expected logout to revoke the refresh token family")
 	}
 }

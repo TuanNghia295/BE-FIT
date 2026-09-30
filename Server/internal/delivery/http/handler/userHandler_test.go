@@ -171,8 +171,8 @@ func TestWebRefreshUsesLoginCookie(t *testing.T) {
 		t.Fatalf("expected login status 200, got %d: %s", loginResponse.Code, loginResponse.Body.String())
 	}
 	cookies := loginResponse.Result().Cookies()
-	if len(cookies) != 1 || cookies[0].Path != "/refresh" || !cookies[0].HttpOnly {
-		t.Fatalf("expected HttpOnly refresh cookie scoped to /refresh, got %#v", cookies)
+	if len(cookies) != 1 || cookies[0].Path != "/" || !cookies[0].HttpOnly {
+		t.Fatalf("expected HttpOnly refresh cookie scoped to /, got %#v", cookies)
 	}
 
 	refreshRequest := httptest.NewRequest(http.MethodPost, "/refresh", nil)

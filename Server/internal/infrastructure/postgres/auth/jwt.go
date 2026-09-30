@@ -1,10 +1,16 @@
 package auth
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/pem"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -12,13 +18,55 @@ import (
 )
 
 type JWTService struct {
-	secret []byte
+	privateKey *ecdsa.PrivateKey
+	publicKey  *ecdsa.PublicKey
 }
 
-func NewJWTService(secret string) *JWTService {
-	return &JWTService{
-		secret: []byte(secret),
+func NewJWTService(privateKeyPEM, publicKeyPEM []byte) (*JWTService, error) {
+	privateBlock, _ := pem.Decode(privateKeyPEM)
+	if privateBlock == nil {
+		return nil, fmt.Errorf("JWT private key is not valid PEM")
 	}
+	privateKey, err := x509.ParseECPrivateKey(privateBlock.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse JWT private key: %w", err)
+	}
+	if privateKey.Curve != elliptic.P256() {
+		return nil, fmt.Errorf("JWT private key must use the P-256 curve for ES256")
+	}
+
+	publicBlock, _ := pem.Decode(publicKeyPEM)
+	if publicBlock == nil {
+		return nil, fmt.Errorf("JWT public key is not valid PEM")
+	}
+	parsedPublicKey, err := x509.ParsePKIXPublicKey(publicBlock.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse JWT public key: %w", err)
+	}
+	publicKey, ok := parsedPublicKey.(*ecdsa.PublicKey)
+	if !ok || publicKey.Curve != elliptic.P256() {
+		return nil, fmt.Errorf("JWT public key must be ECDSA P-256 for ES256")
+	}
+	if privateKey.X.Cmp(publicKey.X) != 0 || privateKey.Y.Cmp(publicKey.Y) != 0 {
+		return nil, fmt.Errorf("JWT private and public keys do not match")
+	}
+
+	return &JWTService{
+		privateKey: privateKey,
+		publicKey:  publicKey,
+	}, nil
+}
+
+func LoadJWTService(privateKeyPath, publicKeyPath string) (*JWTService, error) {
+	privateKeyPEM, err := os.ReadFile(privateKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("read JWT private key: %w", err)
+	}
+	publicKeyPEM, err := os.ReadFile(publicKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("read JWT public key: %w", err)
+	}
+	return NewJWTService(privateKeyPEM, publicKeyPEM)
 }
 
 /*
@@ -46,15 +94,15 @@ func (s *JWTService) GenerateAccessToken(userID uuid.UUID) (string, error) {
 	}
 
 	// creating a new token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
 	// SignedString creates and returns a complete, signed JWT.
-	return token.SignedString(s.secret)
+	return token.SignedString(s.privateKey)
 }
 
 func (s *JWTService) ValidateAccessToken(tokenString string) (*AccessTokenClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &AccessTokenClaims{}, func(t *jwt.Token) (interface{}, error) {
-		return s.secret, nil
-	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+		return s.publicKey, nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Alg()}))
 
 	if err != nil {
 		return nil, err

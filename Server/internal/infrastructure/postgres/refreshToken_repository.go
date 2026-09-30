@@ -45,6 +45,8 @@ func (r *RefreshTokenRepository) Rotate(ctx context.Context, tokenHash string, r
 	var rotationErr error
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var current entities.RefreshToken
+		// Khóa các row được lấy ra. Tránh transaction khác dùng cùng lúc
+		// Tìm người dùng có tokenhash trùng với tokenhash trong db để update
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where(`"tokenHash" = ?`, tokenHash).
 			First(&current).Error
