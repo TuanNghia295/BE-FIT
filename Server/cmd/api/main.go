@@ -6,12 +6,11 @@ import (
 
 	"github.com/TuanNghia295/BE-FIT/config"
 	http "github.com/TuanNghia295/BE-FIT/internal/delivery/http/handler"
-	"github.com/TuanNghia295/BE-FIT/internal/delivery/http/middleware"
 	"github.com/TuanNghia295/BE-FIT/internal/infrastructure/postgres"
 	"github.com/TuanNghia295/BE-FIT/internal/infrastructure/postgres/auth"
-	"github.com/TuanNghia295/BE-FIT/internal/usecase/user"
+	"github.com/TuanNghia295/BE-FIT/internal/usecase"
 	"github.com/TuanNghia295/BE-FIT/package/database"
-	"github.com/gin-gonic/gin"
+	"github.com/TuanNghia295/BE-FIT/router"
 )
 
 func main() {
@@ -20,31 +19,27 @@ func main() {
 	// Connect to the database
 	db := database.ConnectDB(appConfig)
 
-	userRepo := postgres.NewUserRepository(db)
-	refreshRepo := postgres.NewRefreshTokenRepository(db)
+	configRepo := postgres.ConfigRepo(db)
 	tokenService, err := auth.LoadJWTService(appConfig.JWTPrivateKeyPath, appConfig.JWTPublicKeyPath)
 	if err != nil {
 		log.Fatalf("load JWT key pair: %v", err)
 	}
 
-	registerUsecase := user.NewRegisterUsecase(userRepo)
-	loginUsecase := user.NewLoginUseCase(userRepo, refreshRepo, tokenService)
-	refreshUsecase := user.NewRefreshUseCase(refreshRepo, tokenService)
+	useCases := usecase.NewUseCase(
+		configRepo.UserRepository,
+		configRepo.RefreshTokenRepository,
+		tokenService,
+	)
+	userHandler := http.NewUserHandler(
+		useCases.RegisterUser,
+		useCases.LoginUser,
+		useCases.RefreshUser,
+		useCases.MeUser,
+		appConfig.CookieSecure,
+	)
 
-	userHandler := http.NewUserHandler(registerUsecase, loginUsecase, refreshUsecase, appConfig.CookieSecure)
-
-	r := gin.Default()
-
-	r.Use(middleware.ErrorHandler())
-
-	r.GET("/", func(ctx *gin.Context) {
-		ctx.JSON(200, gin.H{"message": "Server is running"})
-	})
-
-	r.POST("/login", userHandler.Login)
-	r.POST("/register", userHandler.Register)
-	r.POST("/refresh", userHandler.Refresh)
-	r.POST("/logout", userHandler.Logout)
+	r := router.NewRouter(userHandler, tokenService)
+	r.SetupRoutes()
 
 	// Start API server
 	PORT := appConfig.Server.Port

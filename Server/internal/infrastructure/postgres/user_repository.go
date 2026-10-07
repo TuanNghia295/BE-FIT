@@ -8,6 +8,7 @@ import (
 	"github.com/TuanNghia295/BE-FIT/internal/domains/entities"
 	domainErrors "github.com/TuanNghia295/BE-FIT/internal/domains/errors"
 	"github.com/TuanNghia295/BE-FIT/internal/domains/repositories"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -35,5 +36,18 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entiti
 		return nil, err
 	}
 
+	return &user, nil
+}
+
+func (r *userRepository) FindByID(ctx context.Context, userID uuid.UUID) (*entities.Users, error) {
+	var user entities.Users
+
+	err := r.db.WithContext(ctx).Where("id = ?", userID).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domainErrors.ErrUserNotFound
+		}
+		return nil, err
+	}
 	return &user, nil
 }

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/TuanNghia295/BE-FIT/internal/delivery/http/middleware"
 	"github.com/TuanNghia295/BE-FIT/internal/domains/entities"
 	domainErrors "github.com/TuanNghia295/BE-FIT/internal/domains/errors"
 	"github.com/TuanNghia295/BE-FIT/internal/domains/repositories"
@@ -22,6 +23,12 @@ type handlerUserRepo struct{ account *entities.Users }
 
 func (r *handlerUserRepo) Create(context.Context, *entities.Users) error { return nil }
 func (r *handlerUserRepo) FindByEmail(context.Context, string) (*entities.Users, error) {
+	return r.account, nil
+}
+func (r *handlerUserRepo) FindByID(_ context.Context, userID uuid.UUID) (*entities.Users, error) {
+	if r.account == nil || r.account.ID != userID {
+		return nil, domainErrors.ErrUserNotFound
+	}
 	return r.account, nil
 }
 
@@ -80,7 +87,7 @@ func newLoginTestHandler(t *testing.T, cookieSecure bool) *UserHandler {
 	tokenService := handlerTokenService{}
 	login := userUsecase.NewLoginUseCase(userRepo, refreshRepo, tokenService)
 	refresh := userUsecase.NewRefreshUseCase(refreshRepo, tokenService)
-	return NewUserHandler(nil, login, refresh, cookieSecure)
+	return NewUserHandler(nil, login, refresh, nil, cookieSecure)
 }
 
 func TestLoginWebReceivesHttpOnlyRefreshCookie(t *testing.T) {
@@ -156,6 +163,7 @@ func TestWebRefreshUsesLoginCookie(t *testing.T) {
 		nil,
 		userUsecase.NewLoginUseCase(userRepo, refreshRepo, tokenService),
 		userUsecase.NewRefreshUseCase(refreshRepo, tokenService),
+		userUsecase.NewMeUseCase(userRepo),
 		true,
 	)
 	router := gin.New()
@@ -189,6 +197,47 @@ func TestWebRefreshUsesLoginCookie(t *testing.T) {
 	}
 	if _, exists := body["refresh_token"]; exists {
 		t.Fatal("web refresh response must not expose refresh token in JSON")
+	}
+}
+
+func TestMeReturnsAuthenticatedUserWithoutPassword(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	userID := uuid.New()
+	account := &entities.Users{
+		ID:       userID,
+		Email:    "me@example.com",
+		FullName: "Me User",
+		Password: "must-not-be-returned",
+	}
+	userRepo := &handlerUserRepo{account: account}
+	handler := NewUserHandler(
+		nil,
+		nil,
+		nil,
+		userUsecase.NewMeUseCase(userRepo),
+		false,
+	)
+	router := gin.New()
+	router.GET("/me", func(c *gin.Context) {
+		c.Set(middleware.AuthenticatedUserIDKey, userID)
+		c.Next()
+	}, handler.Me)
+
+	request := httptest.NewRequest(http.MethodGet, "/me", nil)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", response.Code, response.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body["email"] != account.Email || body["fullName"] != account.FullName {
+		t.Fatalf("unexpected user response: %#v", body)
+	}
+	if _, exists := body["password"]; exists {
+		t.Fatal("user response must not expose password")
 	}
 }
 

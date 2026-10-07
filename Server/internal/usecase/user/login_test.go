@@ -26,6 +26,10 @@ func (r *testUserRepository) FindByEmail(context.Context, string) (*entities.Use
 	return r.user, r.err
 }
 
+func (r *testUserRepository) FindByID(context.Context, uuid.UUID) (*entities.Users, error) {
+	return r.user, r.err
+}
+
 type testRefreshTokenRepository struct {
 	token         *entities.RefreshToken
 	created       *entities.RefreshToken

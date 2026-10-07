@@ -8,15 +8,18 @@ import (
 	"time"
 
 	"github.com/TuanNghia295/BE-FIT/internal/delivery/http/dto"
+	"github.com/TuanNghia295/BE-FIT/internal/delivery/http/middleware"
 	domainErrors "github.com/TuanNghia295/BE-FIT/internal/domains/errors"
 	"github.com/TuanNghia295/BE-FIT/internal/usecase/user"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type UserHandler struct {
 	registerUsecase *user.RegisterUsecase
 	loginUsecase    *user.LoginUsecase
 	refreshUsecase  *user.RefreshUsecase
+	meUsecase       *user.MeUsecase
 	cookieSecure    bool
 }
 
@@ -24,12 +27,14 @@ func NewUserHandler(
 	registerUsecase *user.RegisterUsecase,
 	loginUsecase *user.LoginUsecase,
 	refreshUsecase *user.RefreshUsecase,
+	meUsecase *user.MeUsecase,
 	cookieSecure bool,
 ) *UserHandler {
 	return &UserHandler{
 		registerUsecase: registerUsecase,
 		loginUsecase:    loginUsecase,
 		refreshUsecase:  refreshUsecase,
+		meUsecase:       meUsecase,
 		cookieSecure:    cookieSecure,
 	}
 }
@@ -170,4 +175,20 @@ func (h *UserHandler) Logout(c *gin.Context) {
 		c.SetCookie("refresh_token", "", -1, "/", "", h.cookieSecure, true) //xóa refresh token cookie
 	}
 	c.JSON(http.StatusOK, gin.H{"success": "logout successfully"})
+}
+
+func (h *UserHandler) Me(c *gin.Context) {
+	value, exists := c.Get(middleware.AuthenticatedUserIDKey)
+	userID, ok := value.(uuid.UUID)
+	if !exists || !ok {
+		c.Error(domainErrors.ErrUnauthorized)
+		return
+	}
+
+	currentUser, err := h.meUsecase.Execute(c.Request.Context(), userID)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, currentUser)
 }
