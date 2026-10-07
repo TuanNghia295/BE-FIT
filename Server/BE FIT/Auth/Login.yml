@@ -1,17 +1,18 @@
 info:
-  name: Register
+  name: Login
   type: http
-  seq: 1
 
 http:
   method: POST
-  url: http://localhost:2905/register
+  url: http://localhost:2905/login
+  headers:
+    - name: X-Client-Type
+      value: web
   body:
     type: json
     data: |-
       {
         "email": "tuannghia2905@gmail.com",
-        "fullName": "Nguyen Tuan Nghia",
         "password": "Panda2905@"
       }
   auth: inherit
