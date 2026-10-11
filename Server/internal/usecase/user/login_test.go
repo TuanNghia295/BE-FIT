@@ -30,6 +30,15 @@ func (r *testUserRepository) FindByID(context.Context, uuid.UUID) (*entities.Use
 	return r.user, r.err
 }
 
+func (r *testUserRepository) Update(
+	context.Context,
+	uuid.UUID,
+	*entities.Users,
+	*entities.FitnessProfile,
+) (*entities.Users, error) {
+	return r.user, r.err
+}
+
 type testRefreshTokenRepository struct {
 	token         *entities.RefreshToken
 	created       *entities.RefreshToken

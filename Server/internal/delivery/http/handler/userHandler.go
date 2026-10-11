@@ -9,6 +9,7 @@ import (
 
 	"github.com/TuanNghia295/BE-FIT/internal/delivery/http/dto"
 	"github.com/TuanNghia295/BE-FIT/internal/delivery/http/middleware"
+	"github.com/TuanNghia295/BE-FIT/internal/domains/entities"
 	domainErrors "github.com/TuanNghia295/BE-FIT/internal/domains/errors"
 	"github.com/TuanNghia295/BE-FIT/internal/usecase/user"
 	"github.com/gin-gonic/gin"
@@ -191,4 +192,41 @@ func (h *UserHandler) Me(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, currentUser)
+}
+
+func (h *UserHandler) UpdateProfile(c *gin.Context) {
+	value, exists := c.Get(middleware.AuthenticatedUserIDKey)
+	userID, ok := value.(uuid.UUID)
+	if !exists || !ok {
+		c.Error(domainErrors.ErrUnauthorized)
+		return
+	}
+
+	// Request body
+	var req dto.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	// Call the use case to update the profile
+	// Usecase is the business logic layer, it will handle the logic of updating the profile and return the updated user or an error
+	updatedUser, err := h.meUsecase.UpdateProfile(c.Request.Context(), userID, user.UserProfile{
+		User: &entities.Users{
+			Email:    req.Email,
+			FullName: req.FullName,
+		},
+		Fitness: &entities.FitnessProfile{
+			Height: req.Height,
+			Weight: req.Weight,
+			Gender: req.Gender,
+			Level:  req.Level,
+		},
+	})
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedUser)
 }

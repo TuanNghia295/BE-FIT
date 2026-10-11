@@ -19,7 +19,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type handlerUserRepo struct{ account *entities.Users }
+type handlerUserRepo struct {
+	account        *entities.Users
+	updatedFitness *entities.FitnessProfile
+}
 
 func (r *handlerUserRepo) Create(context.Context, *entities.Users) error { return nil }
 func (r *handlerUserRepo) FindByEmail(context.Context, string) (*entities.Users, error) {
@@ -29,6 +32,21 @@ func (r *handlerUserRepo) FindByID(_ context.Context, userID uuid.UUID) (*entiti
 	if r.account == nil || r.account.ID != userID {
 		return nil, domainErrors.ErrUserNotFound
 	}
+	return r.account, nil
+}
+func (r *handlerUserRepo) Update(
+	_ context.Context,
+	userID uuid.UUID,
+	updatedUser *entities.Users,
+	updatedFitness *entities.FitnessProfile,
+) (*entities.Users, error) {
+	if r.account == nil || r.account.ID != userID {
+		return nil, domainErrors.ErrUserNotFound
+	}
+	r.account.Email = updatedUser.Email
+	r.account.FullName = updatedUser.FullName
+	updatedFitness.UserID = userID
+	r.updatedFitness = updatedFitness
 	return r.account, nil
 }
 
@@ -238,6 +256,40 @@ func TestMeReturnsAuthenticatedUserWithoutPassword(t *testing.T) {
 	}
 	if _, exists := body["password"]; exists {
 		t.Fatal("user response must not expose password")
+	}
+}
+
+func TestUpdateProfileSeparatesUserAndFitnessFields(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	userID := uuid.New()
+	userRepo := &handlerUserRepo{account: &entities.Users{ID: userID}}
+	handler := NewUserHandler(nil, nil, nil, userUsecase.NewMeUseCase(userRepo), false)
+	router := gin.New()
+	router.PUT("/me", func(c *gin.Context) {
+		c.Set(middleware.AuthenticatedUserIDKey, userID)
+		c.Next()
+	}, handler.UpdateProfile)
+
+	request := httptest.NewRequest(http.MethodPut, "/me", strings.NewReader(
+		`{"email":"updated@example.com","fullName":"Updated User","height":175,"weight":72,"gender":"male","level":"beginner"}`,
+	))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", response.Code, response.Body.String())
+	}
+	if userRepo.account.Email != "updated@example.com" || userRepo.account.FullName != "Updated User" {
+		t.Fatalf("user fields were not updated: %#v", userRepo.account)
+	}
+	if profile := userRepo.updatedFitness; profile == nil ||
+		profile.UserID != userID ||
+		profile.Height != 175 ||
+		profile.Weight != 72 ||
+		profile.Gender != "male" ||
+		profile.Level != "beginner" {
+		t.Fatalf("fitness fields were not updated correctly: %#v", profile)
 	}
 }
 

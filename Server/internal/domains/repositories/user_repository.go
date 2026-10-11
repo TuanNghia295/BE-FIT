@@ -12,4 +12,10 @@ type UserRepository interface {
 	Create(ctx context.Context, user *entities.Users) error
 	FindByEmail(ctx context.Context, email string) (*entities.Users, error)
 	FindByID(ctx context.Context, userID uuid.UUID) (*entities.Users, error)
+	Update(
+		ctx context.Context,
+		userID uuid.UUID,
+		updatedUser *entities.Users,
+		updatedFitness *entities.FitnessProfile,
+	) (*entities.Users, error)
 }
