@@ -8,7 +8,7 @@ http:
   url: http://localhost:2905/me
   auth:
     type: bearer
-    token: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNmJiNmJjNzAtNzEzZi00MTUwLTg1OTEtY2M0NDZkNDc3MzFkIiwic3ViIjoiNmJiNmJjNzAtNzEzZi00MTUwLTg1OTEtY2M0NDZkNDc3MzFkIiwiZXhwIjoxNzkxMzY4NjYzLCJpYXQiOjE3OTEzNjc3NjN9.p2aw_p0U2-kcMWPY4rinKf_Q-RGdlXZ4rfoR52z9jHCTacgonyh6Y4UC3HswpFC-C7q2NTb4GmM7yJLUftpQyg
+    token: eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNmJiNmJjNzAtNzEzZi00MTUwLTg1OTEtY2M0NDZkNDc3MzFkIiwic3ViIjoiNmJiNmJjNzAtNzEzZi00MTUwLTg1OTEtY2M0NDZkNDc3MzFkIiwiZXhwIjoxNzkxNjk2NzE5LCJpYXQiOjE3OTE2OTU4MTl9.HioMNUXsZN9dm0Rj5fokOJroGT--3ldDBYSeLf3ESHPKVXLzpn-QyqU01SCWPM5W2CKyuKpLwnvG5_03Bs2jYg
 
 settings:
   encodeUrl: true
