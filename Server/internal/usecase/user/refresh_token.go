@@ -88,9 +88,8 @@ func (u *RefreshUsecase) Logout(ctx context.Context, refreshToken string) error 
 	if refreshToken == "" {
 		return domainErrors.ErrUnauthorized
 	}
-	// Hash token
+
 	tokenHash := u.tokenGen.HashRefreshToken(refreshToken)
-	// Find token hash from DB to validate
 	token, err := u.refreshRepo.FindByTokenHash(ctx, tokenHash)
 	if errors.Is(err, domainErrors.ErrRefreshTokenNotFound) {
 		return domainErrors.ErrUnauthorized

@@ -18,6 +18,40 @@ type LoginTokenService interface {
 	HashRefreshToken(token string) string
 }
 
+type RegisterUsecase struct {
+	userRepo repositories.UserRepository
+}
+
+func NewRegisterUsecase(userRepo repositories.UserRepository) *RegisterUsecase {
+	return &RegisterUsecase{userRepo: userRepo}
+}
+
+func (u *RegisterUsecase) Execute(ctx context.Context, email string, fullName, password string) (*entities.Users, error) {
+	existingUser, err := u.userRepo.FindByEmail(ctx, email)
+	if err == nil && existingUser != nil {
+		return nil, errors.New("Email already exists")
+	}
+	if err != nil && !errors.Is(err, domainErrors.ErrUserNotFound) {
+		return nil, err
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	newUser := &entities.Users{
+		Email:    email,
+		FullName: fullName,
+		Password: string(hashedPassword),
+	}
+	if err := u.userRepo.Create(ctx, newUser); err != nil {
+		return nil, err
+	}
+
+	return newUser, nil
+}
+
 type LoginUsecase struct {
 	userRepo    repositories.UserRepository
 	refreshRepo repositories.RefreshTokenRepository
@@ -46,28 +80,24 @@ func NewLoginUseCase(
 }
 
 func (u *LoginUsecase) Execute(ctx context.Context, email string, password string) (*LoginResult, error) {
-	user, err := u.userRepo.FindByEmail(ctx, email)
-	if errors.Is(err, domainErrors.ErrUserNotFound) || (err == nil && user == nil) {
+	account, err := u.userRepo.FindByEmail(ctx, email)
+	if errors.Is(err, domainErrors.ErrUserNotFound) || (err == nil && account == nil) {
 		return nil, domainErrors.ErrUnauthorized
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(account.Password), []byte(password)); err != nil {
 		return nil, domainErrors.ErrUnauthorized
 	}
 
-	// create access token
-	accessToken, err := u.tokenGen.GenerateAccessToken(user.ID)
+	accessToken, err := u.tokenGen.GenerateAccessToken(account.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	// create family token
 	familyID := uuid.New()
-
-	// create refresh token
 	refreshToken, err := u.tokenGen.GenerateRefreshToken()
 	if err != nil {
 		return nil, err
@@ -78,7 +108,7 @@ func (u *LoginUsecase) Execute(ctx context.Context, email string, password strin
 		ID:          uuid.New(),
 		TokenHash:   u.tokenGen.HashRefreshToken(refreshToken),
 		TokenFamily: familyID,
-		UserID:      user.ID,
+		UserID:      account.ID,
 		ExpiresAt:   expiresAt,
 	}
 	if err := u.refreshRepo.Create(ctx, refreshRecord); err != nil {
@@ -91,6 +121,6 @@ func (u *LoginUsecase) Execute(ctx context.Context, email string, password strin
 		TokenType:        "Bearer",
 		ExpiresIn:        15 * 60,
 		RefreshExpiresAt: expiresAt,
-		UserID:           user.ID,
+		UserID:           account.ID,
 	}, nil
 }

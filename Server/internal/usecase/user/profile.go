@@ -26,7 +26,7 @@ func (u *MeUsecase) Execute(ctx context.Context, userID uuid.UUID) (*entities.Us
 }
 
 // UpdateProfile updates the user's profile information in the database.
-// updatedUser is a pointer to an entities.Users and entities.FitnessProfile struct that contains the updated profile information.
+// updatedUser contains the user and fitness profile changes.
 func (u *MeUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, updatedUser UserProfile) (*entities.Users, error) {
 	return u.userRepo.Update(ctx, userID, updatedUser.User, updatedUser.Fitness)
 }
